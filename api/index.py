@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# ✅ FIRST create app
+app = FastAPI()
+
+# ✅ THEN add middleware
 origins = [
     "http://localhost:3000",
     "https://resume-ai-pe89.vercel.app"
@@ -8,22 +12,13 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,   # 🔥 IMPORTANT (not "*")
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-from mangum import Mangum
-
-from api.database import *
-from api.models import *
-
-app = FastAPI(title="Resume AI Backend")
-
+# 👇 your existing routes stay below
 @app.get("/")
 def home():
     return {"message": "Resume AI backend running 🚀"}
-
-# REQUIRED for Vercel
-handler = Mangum(app)
