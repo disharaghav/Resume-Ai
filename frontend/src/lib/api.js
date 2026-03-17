@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = `${process.env.REACT_APP_API_URL}/api`;
+const API_BASE = process.env.REACT_APP_API_URL; // ✅ FIXED
 
 const api = axios.create({
     baseURL: API_BASE,
@@ -19,9 +19,9 @@ api.interceptors.request.use((config) => {
 });
 
 export const authAPI = {
-    signup: (data) => api.post('/auth/signup', data),
-    login: (data) => api.post('/auth/login', data),
-    me: () => api.get('/auth/me'),
+    signup: (data) => api.post('/signup', data), // ✅ FIXED
+    login: (data) => api.post('/login', data),   // ✅ FIXED
+    me: () => api.get('/me'), // optional (you can remove if not implemented)
 };
 
 export const jobsAPI = {
@@ -42,4 +42,3 @@ export const applicationsAPI = {
 };
 
 export default api;
-
