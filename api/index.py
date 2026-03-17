@@ -2,9 +2,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 
+# ✅ Initialize app FIRST
 app = FastAPI()
 
-# ✅ CORS (important)
+# ✅ CORS configuration
 origins = [
     "http://localhost:3000",
     "https://resume-ai-pe89.vercel.app"
@@ -18,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Fake DB (temporary storage)
+# ✅ In-memory database (temporary)
 users_db = {}
 
 # ✅ Models
@@ -35,7 +36,7 @@ class UserLogin(BaseModel):
 def home():
     return {"message": "Resume AI backend running 🚀"}
 
-# ✅ Signup
+# ✅ Signup route
 @app.post("/signup")
 def signup(user: UserSignup):
     if user.email in users_db:
@@ -44,7 +45,7 @@ def signup(user: UserSignup):
     users_db[user.email] = user.password
     return {"message": "Signup successful"}
 
-# ✅ Login
+# ✅ Login route
 @app.post("/login")
 def login(user: UserLogin):
     if user.email not in users_db:
