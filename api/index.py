@@ -54,11 +54,6 @@ OS_VERSION = platform.release()
 OS_PLATFORM = platform.platform()
 
 # =========================
-# 🧠 IN-MEMORY USERS (FIX)
-# =========================
-users_db = {}
-
-# =========================
 # 🔑 UTILS
 # =========================
 def verify_password(plain_password, hashed_password):
@@ -78,10 +73,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
 
-        if not user_id or user_id not in users_db:
-            raise HTTPException(status_code=401, detail="Invalid token")
+        user = db.users.get(user_id)
 
-        return users_db[user_id]
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+
+        return user
 
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -116,18 +113,18 @@ class UserLogin(BaseModel):
 @app.post("/api/auth/signup")
 async def signup(user: models.UserCreate):
     try:
-        # check if exists
-        for u in users_db.values():
+        # check if user exists
+        for u in db.users.values():
             if u["email"] == user.email:
                 raise HTTPException(status_code=400, detail="Email already registered")
 
-        user_id = str(len(users_db) + 1)
+        user_id = str(len(db.users) + 1)
 
         user_dict = user.model_dump()
         user_dict["id"] = user_id
         user_dict["password"] = get_password_hash(user.password)
 
-        users_db[user_id] = user_dict
+        db.users[user_id] = user_dict  # ✅ persistent storage
 
         token = create_access_token({"user_id": user_id})
 
@@ -138,26 +135,20 @@ async def signup(user: models.UserCreate):
 
     except Exception as e:
         print("SIGNUP ERROR:", e)
-        raise HTTPException(status_code=500, detail="Signup failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/auth/login")
 async def login(login_data: UserLogin):
-    user = None
+    for user in db.users.values():
+        if user["email"] == login_data.email:
+            if verify_password(login_data.password, user["password"]):
+                token = create_access_token({"user_id": user["id"]})
+                return {
+                    "token": token,
+                    "user": models.UserOut(**user)
+                }
 
-    for u in users_db.values():
-        if u["email"] == login_data.email and verify_password(login_data.password, u["password"]):
-            user = u
-            break
-
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    token = create_access_token({"user_id": user["id"]})
-
-    return {
-        "token": token,
-        "user": models.UserOut(**user)
-    }
+    raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @app.get("/api/auth/me", response_model=models.UserOut)
 async def me(current_user: dict = Depends(get_current_user)):
